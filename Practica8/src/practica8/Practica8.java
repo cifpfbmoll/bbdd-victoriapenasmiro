@@ -5,21 +5,19 @@
  */
 package practica8;
 
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -68,6 +66,7 @@ public class Practica8 {
                     menuConsulta();
                     break;
                 case 2:
+                    updateTableSeguro();
                     break;
                 case 3:
                     break;
@@ -96,6 +95,7 @@ public class Practica8 {
                     ejecutarQueryPeligrosa();
                     break;
                 case 2:
+                    ejecutarQuerySegura();
                     break;
                 case 3:
                     salir = true;
@@ -121,12 +121,14 @@ public class Practica8 {
         Float price;
         try (BufferedWriter writer = new BufferedWriter(new FileWriter("logQueriesPeligrosas", true))){
             writer.write(registrarFecha() + " - " + registrarHora());
+            writer.newLine();
             writer.write("CERVEZA: " + beer);
             while (rs.next ()) {
                 bar = rs.getString("bar");//recupero el valor de la columna bar, que es un varchar
                 beer = rs.getString(2);//recuero el valor de la columna 2, que es un varchar
                 price = rs.getFloat(3);
                 writer.write("BAR: " + bar + " : " + price + "\n");
+                System.out.println("BAR: " + bar + " : " + price);
             }
         }finally{
             //Si rs es distinto de null es que se le pudo asignar un recurso
@@ -136,11 +138,87 @@ public class Practica8 {
         }        
     }
     
-    public static void ejecutarQuerySegura(){
+    public static void ejecutarQuerySegura() throws SQLException, IOException{
         Scanner lector = new Scanner(System.in);
-        System.out.println("Dime una marca de cerveza y te daré su precio en los bares donde está disponible");
-        System.out.println("Las opciones son: \n Amstel\n Budweiser\n Corona\n Dixie\n Erdinger\n Full Sail \n");
-        String cerveza = lector.nextLine();
+        System.out.println("Dime el nombre de un drinker y te enseñaré su direccion");
+        System.out.println("Las opciones son: \n Amy\n Ben\n Coy\n Dan\n Eve");
+        String name = lector.nextLine();
+        String query = "Select * from drinker where name = ?";
+        Connection con = obtenerConexion();
+        PreparedStatement pst = con.prepareStatement(query);
+        pst.setString(1, name);
+        ResultSet rs = pst.executeQuery();
+       //utilizo el try-with-resources para aplicar el autoclosable de los recursos cargados, asi no hace falta cerrarlos
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("logQueriesSeguras", true))){
+            writer.write(registrarFecha() + " - " + registrarHora());
+            writer.newLine();
+            while (rs.next ()) {
+                writer.write("NAME: " + rs.getString(1) + " - ADDRESS: " + rs.getString("address") + "\n");//indico por indice de columna o por nombre
+                System.out.println("NAME: " + rs.getString(1) + " - ADDRESS: " + rs.getString("address") + "\n");
+            }
+        }finally{
+            //Si rs es distinto de null es que se le pudo asignar un recurso
+            if (rs != null) rs.close (); //cierra el objeto ResultSet llamado rs.
+            if (pst != null) pst.close ();//cierra el objeto Statement llamado st
+            if (con != null) con.close (); //cierra el objeto Connection llamado con
+        }
+    }
+    
+    public static void updateTableSeguro() throws SQLException{
+        Scanner lector = new Scanner(System.in);
+        //conecto a la bbdd
+        Connection con = obtenerConexion();
+        //construyo la query
+        String query = "update ? set ? = ?";
+        //preparo la sentencia
+        PreparedStatement pst = con.prepareStatement(query);
+        String auxValor; //auxiliar para recoger los valores a modificar
+        String auxCampo; //aux para recoger el nombre del campo de la condicion (where)
+        String auxCondicion; //aux para recoger la condicion a tener en cuenta en la query
+        int filasAfectadas = 0; //contador donde iré sumando los cambios
+        int condicion;//auxiliar para la seleccion del tipo de update
+        System.out.println("¿Qué tabla quieres modificar?");
+        System.out.println("Las existentes son: \nbar\nbeer\ndrinker\nfrequents\nlikes\nserves");
+        String tabla = lector.nextLine();
+        pst.setString(1, tabla); //asigno el primer valor de la query (nombre tabla)
+        System.out.println("¿Cuántos campos de la tabla " + tabla + " quieres modificar?");
+        int updates = Integer.parseInt(lector.nextLine()); //parseo para que el nextInt se se coma el salto de carro
+        ArrayList <String> campos = pedirCampos(updates);
+        System.out.println("¿El cambio debe tener una condicion o debe aplicar a todas las filas?. Selecciona una opcion:"
+                + "\n 1. Aplicar el cambio a todas las filas." + "\n 2. Aplicar el cambio con una condición.");
+        condicion = Integer.parseInt(lector.nextLine());
+        
+        for (int i = 0; i<campos.size();i++){
+            pst.setString(2, campos.get(i));//asigno el segundo valor de la query (nombre columna)
+            System.out.println("dime el nuevo valor");
+            auxValor = lector.nextLine();
+            /*indico el nuevo valor a machacar. He puesto un String, pero en el
+            caso de que se haya indicado una columna con tipo de dato numerico, fallará*/
+            pst.setString(3, auxValor);
+            if (condicion == 2){
+                query += " where ? = ? ";
+                System.out.println("Dime el nombre del campo que tiene la condicion:");
+                auxCampo = lector.nextLine();
+                pst.setString(4, auxCampo);
+                System.out.println("Dime el dato que debemos contemplar para que se ejecute el udpate:");
+                auxCondicion = lector.nextLine();
+                pst.setString(5, auxCondicion);
+            }
+            filasAfectadas += pst.executeUpdate(query);
+            System.out.println("Se han aplicado los updates en las" + filasAfectadas);
+        }
+    }
+    
+    public static ArrayList <String> pedirCampos(int cambios){
+        Scanner lector = new Scanner(System.in);
+        String auxCampos;
+        ArrayList <String> campos = new ArrayList <>();
+        for (int i = 0; i<cambios;i++){
+            System.out.println("Dime el nombre del campo " + (i+1) + " que vas a modificar:");
+            auxCampos = lector.nextLine();
+            campos.add(auxCampos);
+        }
+        return campos;
     }
     
     public static String registrarFecha() throws IOException{
