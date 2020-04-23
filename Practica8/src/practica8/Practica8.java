@@ -165,48 +165,67 @@ public class Practica8 {
     }
     
     public static void updateTableSeguro() throws SQLException{
+        /*SUPER IMPORTANTE: El nombre de la tabla y de las columnas, no pueden estar con ?, da error de sintaxis*/
         Scanner lector = new Scanner(System.in);
         //conecto a la bbdd
         Connection con = obtenerConexion();
-        //construyo la query
-        String query = "update ? set ? = ?";
-        //preparo la sentencia
-        PreparedStatement pst = con.prepareStatement(query);
         String auxValor; //auxiliar para recoger los valores a modificar
         String auxCampo; //aux para recoger el nombre del campo de la condicion (where)
         String auxCondicion; //aux para recoger la condicion a tener en cuenta en la query
+        ArrayList <String> campos; //en esta lista guardaré los campos que quiere modificar el usuario
         int filasAfectadas = 0; //contador donde iré sumando los cambios
-        int condicion;//auxiliar para la seleccion del tipo de update
+        boolean condicion = obtenerCondicion();//pregunto al usuario si el update será con una condicion
+        String query;
         System.out.println("¿Qué tabla quieres modificar?");
         System.out.println("Las existentes son: \nbar\nbeer\ndrinker\nfrequents\nlikes\nserves");
         String tabla = lector.nextLine();
-        pst.setString(1, tabla); //asigno el primer valor de la query (nombre tabla)
+        //preparo la sentencia **importante, una vez asignada la query al PreparedStatement no puedo modificarla más adelante**
+        PreparedStatement pst;
         System.out.println("¿Cuántos campos de la tabla " + tabla + " quieres modificar?");
         int updates = Integer.parseInt(lector.nextLine()); //parseo para que el nextInt se se coma el salto de carro
-        ArrayList <String> campos = pedirCampos(updates);
-        System.out.println("¿El cambio debe tener una condicion o debe aplicar a todas las filas?. Selecciona una opcion:"
-                + "\n 1. Aplicar el cambio a todas las filas." + "\n 2. Aplicar el cambio con una condición.");
-        condicion = Integer.parseInt(lector.nextLine());
-        
+        campos = pedirCampos(updates);        
         for (int i = 0; i<campos.size();i++){
-            pst.setString(2, campos.get(i));//asigno el segundo valor de la query (nombre columna)
-            System.out.println("dime el nuevo valor");
+            //en funcion de la condicion tendré una query u otra
+            if (condicion == false){
+                query = "update " + tabla + " set " + campos.get(i) + " = ?";
+            }
+            else{
+                query = "update " + tabla + " set " + campos.get(i) + " = ? where ? = ?";
+            }
+            pst = con.prepareStatement(query);
+            System.out.println("dime el nuevo valor para la columna " + campos.get(i));
             auxValor = lector.nextLine();
             /*indico el nuevo valor a machacar. He puesto un String, pero en el
             caso de que se haya indicado una columna con tipo de dato numerico, fallará*/
-            pst.setString(3, auxValor);
-            if (condicion == 2){
-                query += " where ? = ? ";
+            pst.setString(1, auxValor);
+            if (condicion == true){
                 System.out.println("Dime el nombre del campo que tiene la condicion:");
                 auxCampo = lector.nextLine();
-                pst.setString(4, auxCampo);
-                System.out.println("Dime el dato que debemos contemplar para que se ejecute el udpate:");
+                pst.setString(2, auxCampo);
+                System.out.println("Dime el dato que debemos contemplar para que se ejecute el udpate: " + auxCampo + " = ?");
                 auxCondicion = lector.nextLine();
-                pst.setString(5, auxCondicion);
+                pst.setString(3, auxCondicion);
             }
-            filasAfectadas += pst.executeUpdate(query);
-            System.out.println("Se han aplicado los updates en las" + filasAfectadas);
+            
+            filasAfectadas += pst.executeUpdate();
+            System.out.println("Se han aplicado los updates en " + filasAfectadas + "filas");
         }
+    }
+    
+    public static boolean obtenerCondicion(){
+        Scanner lector = new Scanner(System.in);
+        boolean query;
+        int condicion;
+        System.out.println("¿El cambio debe tener una condicion o debe aplicar a todas las filas?. Selecciona una opcion:"
+        + "\n 1. Aplicar el cambio a todas las filas." + "\n 2. Aplicar el cambio con una condición.");
+        condicion = lector.nextInt();
+        if (condicion == 1){
+            query = false;
+        }
+        else{
+            query = true;
+        }
+        return query;
     }
     
     public static ArrayList <String> pedirCampos(int cambios){
