@@ -120,7 +120,6 @@ public class Practica8 {
     amstel' or 't=t
     
     De esta forma he obtenido todos los resultados de la tabla serves.
-    
     */
     
     public static void ejecutarQueryPeligrosa() throws SQLException, FileNotFoundException, IOException{
@@ -185,47 +184,68 @@ public class Practica8 {
         Scanner lector = new Scanner(System.in);
         //conecto a la bbdd
         Connection con = obtenerConexion();
-        String auxValor; //auxiliar para recoger los valores a modificar
-        String auxCampo; //aux para recoger el nombre del campo de la condicion (where)
-        String auxCondicion; //aux para recoger la condicion a tener en cuenta en la query
+        String query = "";//variable donde guardare la query
+        String auxValor = ""; //auxiliar para recoger los valores a modificar
+        String auxCondicion = ""; //aux para recoger la condicion a tener en cuenta en la query
         ArrayList <String> campos; //en esta lista guardaré los campos que quiere modificar el usuario
-        int filasAfectadas = 0; //contador donde iré sumando los cambios
+        int filasAfectadas = 0; //contador para recoger le num de updates realizados
         boolean condicion = obtenerCondicion();//pregunto al usuario si el update será con una condicion
-        String query;
-        System.out.println("¿Qué tabla quieres modificar?");
-        System.out.println("Las existentes son: \nbar\nbeer\ndrinker\nfrequents\nlikes\nserves");
-        String tabla = lector.nextLine();
+        String tabla = pedirNombreTabla();
         //preparo la sentencia **importante, una vez asignada la query al PreparedStatement no puedo modificarla más adelante**
         PreparedStatement pst;
-        System.out.println("¿Cuántos campos de la tabla " + tabla + " quieres modificar?");
-        int updates = Integer.parseInt(lector.nextLine()); //parseo para que el nextInt se se coma el salto de carro
+        int updates = pedirNumUpdates(tabla);
         campos = pedirCampos(updates);        
         for (int i = 0; i<campos.size();i++){
             //en funcion de la condicion tendré una query u otra
-            if (condicion == false){
-                query = "update " + tabla + " set " + campos.get(i) + " = ?";
-            }
-            else{
-                query = "update " + tabla + " set " + campos.get(i) + " = ? where ? = ?";
-            }
+            query = recuperarQuery(condicion, tabla, campos.get(i), i+1);
+            //ya tengo la estructura de la query, pues preparo la sentencia
             pst = con.prepareStatement(query);
             System.out.println("dime el nuevo valor para la columna " + campos.get(i));
             auxValor = lector.nextLine();
             /*indico el nuevo valor a machacar. He puesto un String, pero en el
             caso de que se haya indicado una columna con tipo de dato numerico, fallará*/
             pst.setString(1, auxValor);
-            if (condicion == true){
-                System.out.println("Dime el nombre del campo que tiene la condicion:");
-                auxCampo = lector.nextLine();
-                pst.setString(2, auxCampo);
-                System.out.println("Dime el dato que debemos contemplar para que se ejecute el udpate: " + auxCampo + " = ?");
+            //en el caso de que tenga una condicion, le asigno el parámetro 2
+            if (condicion){
+                System.out.println("Cuál es el valor de la condición?");
                 auxCondicion = lector.nextLine();
-                pst.setString(3, auxCondicion);
+                pst.setString(2, auxCondicion);
             }
-            System.out.println("La sql que lanza es esta:" + query);
-            filasAfectadas += pst.executeUpdate();
+            
+            System.out.println("La sql que lanza es esta:" + query);//esto me ayuda a comprobar que la query está bien contruida
+            filasAfectadas = pst.executeUpdate(); //esto informa de los cambios realizados
             System.out.println("Se han aplicado los updates en " + filasAfectadas + " filas");
         }
+    }
+    
+    public static int pedirNumUpdates(String tabla){
+        Scanner lector = new Scanner(System.in);
+        System.out.println("¿Cuántos cambios en la tabla " + tabla + " quieres realizar?");
+        int updates = lector.nextInt();
+        return updates;
+    }
+    
+    public static String pedirNombreTabla(){
+        Scanner lector = new Scanner(System.in);
+        System.out.println("¿Qué tabla quieres modificar?");
+        System.out.println("Las existentes son: \nbar\nbeer\ndrinker\nfrequents\nlikes\nserves");
+        String tabla = lector.nextLine();
+        return tabla;
+    }
+    
+    public static String recuperarQuery(boolean condicion, String tabla, String campo, int numCambio){
+        Scanner lector = new Scanner(System.in);
+        String auxCampo = ""; //aux para recoger el nombre del campo de la condicion (where)
+        String query;
+        if (condicion == false){
+            query = "update " + tabla + " set " + campo + " = ?";
+            }
+        else{
+            System.out.println("Cambio " + numCambio + " : ime el nombre del campo que tiene la condicion:");
+            auxCampo = lector.nextLine();
+            query = "update " + tabla + " set " + campo + " = ? where " + auxCampo + "= ?";
+        }
+        return query;        
     }
     
     public static boolean obtenerCondicion(){
@@ -249,7 +269,7 @@ public class Practica8 {
         String auxCampos;
         ArrayList <String> campos = new ArrayList <>();
         for (int i = 0; i<cambios;i++){
-            System.out.println("Dime el nombre del campo " + (i+1) + " que vas a modificar:");
+            System.out.println("Dime el nombre del campo " + (i+1) + " que vas a modificar para el update num " + i + ":");
             auxCampos = lector.nextLine();
             campos.add(auxCampos);
         }
