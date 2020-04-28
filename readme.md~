@@ -11,13 +11,3 @@ introducir por teclado lo siguiente:
 **amstel' or 't=t**
     
 De esta forma he obtenido todos los resultados de la tabla serves.
-
-#PRUEBAS EJERCICIO 2.a
-    **PRIMERA QUERY**: Realizo el siguiente update: update beer set brewer = 'vicky 3' -> FUNCIONA TODO OK
-    **SEGUNDA QUERY**: update beer set producto = 'hola' -> La columna producto no existe, por lo tanto esta query falla.
-    
-    ¿Se actualiza la tabla si falla la primera sentencia? Si la primera query falla, no se ejecuta el update
-    
-    ¿Y si falla la segunda se actualiza la primera?
-    Si la segunda prueba falla, el primer update que ha funcionado correctamente ha quedado grabado,
-    mientras que el segundo que se ha lanzado no se ha ejecutado.

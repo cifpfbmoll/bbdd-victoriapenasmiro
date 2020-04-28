@@ -22,6 +22,7 @@ import java.util.Scanner;
 /**
  *
  * @author victoriapenas
+ * //reiniciar servicio mysql si se me queda colgado: brew services restart mysql
  */
 public class Practica8 {
 
@@ -57,7 +58,7 @@ public class Practica8 {
             System.out.println("---------------------- M E N U ----------------------");
             System.out.println("1. Consulta.");
             System.out.println("2. Actualización.");
-            System.out.println("3. Inserción.");
+            System.out.println("3. Transaciones.");
             System.out.println("4. Salir");
             System.out.println("Dime una opcion: ");
             opcion = lector.nextInt();
@@ -69,6 +70,7 @@ public class Practica8 {
                     updateTableSeguro();
                     break;
                 case 3:
+                    menuTransacciones();
                     break;
                 case 4:
                     salir = true;
@@ -103,8 +105,7 @@ public class Practica8 {
                 default:
                     System.out.println("La opcion indicada no existe, indica otra.");
             }
-        }while(salir == false);
-                    
+        }while(salir == false);     
     }
     
     /*pruebas SQLInjection
@@ -188,7 +189,7 @@ public class Practica8 {
         String auxValor = ""; //auxiliar para recoger los valores a modificar
         String auxCondicion = ""; //aux para recoger la condicion a tener en cuenta en la query
         ArrayList <String> campos; //en esta lista guardaré los campos que quiere modificar el usuario
-        int filasAfectadas = 0; //contador para recoger le num de updates realizados
+        int filasAfectadas = 0; //contador para recoger el num de updates realizados
         boolean condicion = obtenerCondicion();//pregunto al usuario si el update será con una condicion
         String tabla = pedirNombreTabla();
         //preparo la sentencia **importante, una vez asignada la query al PreparedStatement no puedo modificarla más adelante**
@@ -215,7 +216,10 @@ public class Practica8 {
             System.out.println("La sql que lanza es esta:" + query);//esto me ayuda a comprobar que la query está bien contruida
             filasAfectadas = pst.executeUpdate(); //esto informa de los cambios realizados
             System.out.println("Se han aplicado los updates en " + filasAfectadas + " filas");
+            if (pst != null) pst.close (); //cierro el recurso PreparedStatement, lo cierro aqui porqué lo he instanciado dentro del for
         }
+        
+        if (con != null) con.close (); //cierra el objeto Connection llamado con
     }
     
     public static int pedirNumUpdates(String tabla){
@@ -241,7 +245,7 @@ public class Practica8 {
             query = "update " + tabla + " set " + campo + " = ?";
             }
         else{
-            System.out.println("Cambio " + numCambio + " : ime el nombre del campo que tiene la condicion:");
+            System.out.println("Cambio " + numCambio + " : Dime el nombre del campo que tiene la condicion:");
             auxCampo = lector.nextLine();
             query = "update " + tabla + " set " + campo + " = ? where " + auxCampo + "= ?";
         }
@@ -292,4 +296,87 @@ public class Practica8 {
         
         return hora;
     }
+    
+    public static void menuTransacciones() throws SQLException{
+        Scanner lector = new Scanner(System.in);
+        int opcion;
+        boolean salir = false;
+        do{
+            System.out.println("---------------------- M E N U ----------------------");
+            System.out.println("1. Actualización simple.");
+            System.out.println("2. Transaccion_1.");
+            System.out.println("3. Transaccion_2.");
+            System.out.println("4. Salir.");
+            System.out.println("Dime una opcion: ");
+            opcion = lector.nextInt();
+            switch(opcion){
+                case 1:
+                    actualizacionSimple();
+                    break;
+                case 2:
+                    break;
+                case 3:
+                    break;
+                case 4:
+                    salir = true;
+                    break;
+                default:
+                    System.out.println("La opcion indicada no existe, indica otra.");
+            }
+        }while(salir == false);     
+    }
+    
+    /**
+     * Incluye en esta opción dos sentencias update de una de las tablas, en las
+     * que se le pida al usuario qué campo quiere actualizar de dicha tabla y el valor del mismo. 
+    */
+    public static void actualizacionSimple() throws SQLException{
+        Scanner lector = new Scanner(System.in);
+        Connection con = obtenerConexion();
+        String query = "";//variable donde guardare la query
+        String auxValor = "";//aux donde almacenaremos el nuevo valor de la columna donde se realizará el update
+        String auxCondicion = "";//aux donde almacenaremos el valor del where en el caso de que la query tengo condicion
+        PreparedStatement pst;
+        int filasAfectadas = 0; //contador para recoger el num de updates realizados
+        System.out.println("Vamos a preparar dos updates sobre una tabla de la db daw.");
+        boolean condicion = obtenerCondicion();//pregunto al usuario si el update será con una condicion
+        String tabla = pedirNombreTabla();
+        /*aqui no utilizo el método pedirCampos porqué me devuelve una arrayList
+        y como el cambio solo será de una columna, de este modo es más simple*/
+        String campo = "";
+        for (int i = 0; i<2; i++){//preparamos dos queries
+            System.out.print("Update " + (i+1) + ". ");
+            System.out.println("Dime el nombre de la columna de la tabla " + tabla + " que quieres modificar");
+            campo = lector.nextLine();
+            query = recuperarQuery(condicion,tabla,campo,1);
+            pst = con.prepareStatement(query);
+            System.out.println("Dime el nuevo valor para la columna " + campo);
+            auxValor = lector.nextLine();
+            /*indico el nuevo valor a machacar. He puesto un String, pero en el
+            caso de que se haya indicado una columna con tipo de dato numerico, fallará*/
+            pst.setString(1, auxValor);
+            if (condicion){
+                System.out.println("Qué valor debe tener el campo de la condicion");
+                auxCondicion = lector.nextLine();
+                pst.setString(2, auxCondicion);
+            }
+            System.out.println("La sql que se va a lanzar es:" + pst.toString());//imprimo la query
+            filasAfectadas = pst.executeUpdate(); //esto informa de los cambios realizados
+            System.out.println("Se ha aplicado el update en " + filasAfectadas + " filas.");
+            pst.close();//cierro los recursos
+        }
+        con.close();//cierro los recursos
+    }
+    
+    /*PRUEBAS EJERCICIO 2.a
+    PRIMERA QUERY: Realizo el siguiente update: update beer set brewer = 'vicky 3' -> FUNCIONA TODO OK
+    SEGUNDA QUERY: update beer set producto = 'hola' -> La columna producto no existe, por lo tanto esta query falla.
+    
+    ¿Se actualiza la tabla si falla la primera sentencia? Si la primera query falla, no se ejecuta el update
+    
+    ¿Y si falla la segunda se actualiza la primera?
+    Si la segunda prueba falla, el primer update que ha funcionado correctamente ha quedado grabado,
+    mientras que el segundo que se ha lanzado no se ha ejecutado.
+    
+    */
 }
