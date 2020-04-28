@@ -18,6 +18,8 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -330,6 +332,16 @@ public class Practica8 {
      * Incluye en esta opción dos sentencias update de una de las tablas, en las
      * que se le pida al usuario qué campo quiere actualizar de dicha tabla y el valor del mismo. 
     */
+    /*PRUEBAS EJERCICIO 2.a - funcion actualizacionSimple()
+    PRIMERA QUERY: Realizo el siguiente update: update beer set brewer = 'vicky 3' -> FUNCIONA TODO OK
+    SEGUNDA QUERY: update beer set producto = 'hola' -> La columna producto no existe, por lo tanto esta query falla.
+    
+    ¿Se actualiza la tabla si falla la primera sentencia? Si la primera query falla, no se ejecuta el update
+    
+    ¿Y si falla la segunda se actualiza la primera?
+    Si la segunda prueba falla, el primer update que ha funcionado correctamente ha quedado grabado,
+    mientras que el segundo que se ha lanzado no se ha ejecutado.
+    */
     public static void actualizacionSimple() throws SQLException{
         Scanner lector = new Scanner(System.in);
         Connection con = obtenerConexion();
@@ -367,16 +379,79 @@ public class Practica8 {
         }
         con.close();//cierro los recursos
     }
+    /*EJERCICIO 2.b - Incluye una transacción que se compone de tres sentencias de actualización
+    sobre una tabla, aunque habrá una cuarta sentencia de actualización que no
+    forma parte de la transacción.
+    PREGUNTAS:
     
-    /*PRUEBAS EJERCICIO 2.a
-    PRIMERA QUERY: Realizo el siguiente update: update beer set brewer = 'vicky 3' -> FUNCIONA TODO OK
-    SEGUNDA QUERY: update beer set producto = 'hola' -> La columna producto no existe, por lo tanto esta query falla.
-    
-    ¿Se actualiza la tabla si falla la primera sentencia? Si la primera query falla, no se ejecuta el update
-    
-    ¿Y si falla la segunda se actualiza la primera?
-    Si la segunda prueba falla, el primer update que ha funcionado correctamente ha quedado grabado,
-    mientras que el segundo que se ha lanzado no se ha ejecutado.
-    
+    1. ¿Se actualiza la tabla si falla la primera, segunda o tercera sentencia?
+    2. ¿Y si se ejecuta correctamente las tres primeras sentencias que forman
+    parte de la transacción y falla la última qué ocurre?
+    3. ¿Qué ocurre si dejas el autocommit a false y ejecutas el apartado b y luego el a?
     */
+    public static void transaccion1() throws SQLException{
+        //Scanner lector = new Scanner(System.in);
+        //String auxValor = "";
+        int filas;
+        Connection con = obtenerConexion();
+        try {
+            con.setAutoCommit (false);
+            System.out.println("Actualización campo name de la tabla beer");
+            PreparedStatement pst = crearPst("beer","name","name");
+                    //con.prepareStatement("update beer set name = ? where name = ?");
+            /*System.out.println("Dime el nuevo valor del campo name:");
+            auxValor = lector.nextLine();
+            pst.setString(1, auxValor);
+            System.out.println("Dime el valor actual del campo name para que se ejecute el update");
+            auxValor = lector.nextLine();
+            pst.setString(2, auxValor);*/
+            filas = pst.executeUpdate();
+            System.out.println("Se ha aplicado el update en " + filas + " filas.");
+            
+            System.out.println("Actualización campo price tabla serves");
+            pst = crearPst("serves","price","beer");
+            filas = pst.executeUpdate();
+            System.out.println("Se ha aplicado el update en " + filas + " filas.");
+            
+            System.out.println("Actualización tabla frequents");
+            pst = crearPst("frequents","times_a_week","drinker");
+            filas = pst.executeUpdate();
+            System.out.println("Se ha aplicado el update en " + filas + " filas.");
+            
+            con.commit();
+
+        } catch (SQLException ex) {
+            con.rollback();
+            System.out.println("SQLSTATE " + ex.getSQLState() + "SQLMESSAGE" + ex.getMessage());
+            System.out.println("Hago rollback");
+
+        } finally{
+            pst.close();
+            con.close();
+        }
+    }
+    
+    /**
+     * Creamos un objeto de tipo PreparedStatement listo para lanzar executeUpdate
+     * @return devolvemos el PreparedStatement que hemos creado.
+     */
+    public static PreparedStatement crearPst(String tabla, String columna, String campoCondicion) throws SQLException{
+        Scanner lector = new Scanner(System.in);
+        String auxValor = "";
+        String query = "update " + tabla + " set " + columna + " = ? where " + campoCondicion + " =?";
+        Connection con = obtenerConexion();
+        PreparedStatement pst = con.prepareStatement(query);
+        
+        System.out.println("Dime el nuevo valor del campo " + columna);
+        auxValor = lector.nextLine();
+        pst.setString(1, auxValor);
+        System.out.println("Dime el valor actual del campo " + campoCondicion + " para que se ejecute el update");
+        auxValor = lector.nextLine();
+        pst.setString(2, auxValor);
+        
+        con.close();
+        pst.close();
+        
+        return pst;
+    }
 }
