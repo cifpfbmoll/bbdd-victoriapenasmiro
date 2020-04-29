@@ -434,16 +434,14 @@ public class Practica8 {
         Scanner lector = new Scanner(System.in);
         String auxValor = "";
         String query = "update " + tabla + " set " + columna + " = ? where " + campoCondicion + " =?";
-        con = obtenerConexion();
+        //con = obtenerConexion();
         pst = con.prepareStatement(query);
-        
         System.out.println("Dime el nuevo valor del campo " + columna);
         auxValor = lector.nextLine();
         pst.setString(1, auxValor);
         System.out.println("Dime el valor actual del campo " + campoCondicion + " para que se ejecute el update");
         auxValor = lector.nextLine();
         pst.setString(2, auxValor);
-        
         return pst;
     }
 }
