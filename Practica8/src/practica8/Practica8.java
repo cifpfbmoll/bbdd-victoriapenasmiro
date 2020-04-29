@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -386,8 +387,14 @@ public class Practica8 {
     PREGUNTAS:
     
     1. ¿Se actualiza la tabla si falla la primera, segunda o tercera sentencia?
+    RESPUESTA: No se actualiza, las pruebas que he realizado son:
+        1.1 Sentencia 1. Poner una cadena de más de 20 caracteres en la primera sentencia, como el
+    tipo de dato en la tabla es un varchar(20) ha entrado en la exception y se ha ejecutado el rollback.
+        2.1 Sentencia 2. Poner un double que supere el tipo de dato decimal (5,2). No ha guardado el update
+    de la sentencia 1, ha hecho rollback de todo.
     2. ¿Y si se ejecuta correctamente las tres primeras sentencias que forman
     parte de la transacción y falla la última qué ocurre?
+    RESPUESTA: No se actualiza, la prueba que hecho es desconectar el programa antes de ejecutar la ultima query
     3. ¿Qué ocurre si dejas el autocommit a false y ejecutas el apartado b y luego el a?
     */
     public static void transaccion1() throws SQLException{
@@ -432,16 +439,42 @@ public class Practica8 {
      */
     public static PreparedStatement crearPst(Connection con, PreparedStatement pst, String tabla, String columna, String campoCondicion) throws SQLException{
         Scanner lector = new Scanner(System.in);
-        String auxValor = "";
+        String auxCadena;
+        int auxEntero;
+        double auxDecimal;
+        String tipoColumna;
+        ResultSet rs = null;
+        ResultSetMetaData rsmd = null;
         String query = "update " + tabla + " set " + columna + " = ? where " + campoCondicion + " =?";
-        //con = obtenerConexion();
         pst = con.prepareStatement(query);
-        System.out.println("Dime el nuevo valor del campo " + columna);
-        auxValor = lector.nextLine();
-        pst.setString(1, auxValor);
-        System.out.println("Dime el valor actual del campo " + campoCondicion + " para que se ejecute el update");
-        auxValor = lector.nextLine();
-        pst.setString(2, auxValor);
+        
+        //dos porque tengo dos parametros ?
+        for (int i = 0; i<2 ; i++){
+            if (i == 0){
+                System.out.println("Dime el nuevo valor del campo " + columna);
+                rs = pst.executeQuery("select " + columna + " from " + tabla);
+            }
+            else{
+                System.out.println("Dime el valor actual del campo " + campoCondicion + " para que se ejecute el update");
+                rs = pst.executeQuery("select " + campoCondicion + " from " + tabla);
+            }
+            //obtengo el tipo de dato de la columna del primer ? antes de setearla
+            rsmd = rs.getMetaData();
+            tipoColumna = rsmd.getColumnTypeName(1);
+            System.out.println(rsmd.getColumnTypeName(1));
+            //en funcion del tipo de dato necesito un seteo u otro
+            if (tipoColumna == "VARCHAR"){
+                auxCadena = lector.nextLine();
+                pst.setString(i+1, auxCadena);
+            } else if (tipoColumna != "DECIMAL"){
+                auxEntero = Integer.parseInt(lector.nextLine());
+                pst.setInt(i+1, auxEntero);
+            }else{
+                auxDecimal = Double.parseDouble(lector.nextLine());
+                pst.setDouble(i+1, auxDecimal);
+            }
+        }
+        
         return pst;
     }
 }

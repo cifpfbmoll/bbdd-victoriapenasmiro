@@ -12,7 +12,7 @@ introducir por teclado lo siguiente:
     
 De esta forma he obtenido todos los resultados de la tabla serves.
 
-#PRUEBAS EJERCICIO 2.a
+##PRUEBAS EJERCICIO 2.a
     **PRIMERA QUERY**: Realizo el siguiente update: update beer set brewer = 'vicky 3' -> FUNCIONA TODO OK
     **SEGUNDA QUERY**: update beer set producto = 'hola' -> La columna producto no existe, por lo tanto esta query falla.
     
@@ -21,3 +21,15 @@ De esta forma he obtenido todos los resultados de la tabla serves.
     ¿Y si falla la segunda se actualiza la primera?
     Si la segunda prueba falla, el primer update que ha funcionado correctamente ha quedado grabado,
     mientras que el segundo que se ha lanzado no se ha ejecutado.
+##PRUEBAS EJERCICIO 2.b
+    PREGUNTAS:
+    **1. ¿Se actualiza la tabla si falla la primera, segunda o tercera sentencia?**
+    RESPUESTA: No se actualiza, las pruebas que he realizado son:
+        1.1 Sentencia 1. Poner una cadena de más de 20 caracteres en la primera sentencia, como el
+    tipo de dato en la tabla es un varchar(20) ha entrado en la exception y se ha ejecutado el rollback.
+        2.1 Sentencia 2. Poner un double que supere el tipo de dato decimal (5,2). No ha guardado el update
+    de la sentencia 1, ha hecho rollback de todo.
+    **2. ¿Y si se ejecuta correctamente las tres primeras sentencias que forman
+    parte de la transacción y falla la última qué ocurre?**
+    RESPUESTA: No se actualiza, la prueba que hecho es desconectar el programa antes de ejecutar la ultima query
+    3. ¿Qué ocurre si dejas el autocommit a false y ejecutas el apartado b y luego el a?
