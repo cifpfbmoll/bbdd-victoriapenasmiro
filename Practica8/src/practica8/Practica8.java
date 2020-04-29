@@ -316,6 +316,7 @@ public class Practica8 {
                     actualizacionSimple();
                     break;
                 case 2:
+                    transaccion1();
                     break;
                 case 3:
                     break;
@@ -393,11 +394,12 @@ public class Practica8 {
         //Scanner lector = new Scanner(System.in);
         //String auxValor = "";
         int filas;
+        PreparedStatement pst = null;
         Connection con = obtenerConexion();
         try {
             con.setAutoCommit (false);
             System.out.println("Actualización campo name de la tabla beer");
-            PreparedStatement pst = crearPst("beer","name","name");
+            pst = crearPst(con, pst, "beer","name","name");
                     //con.prepareStatement("update beer set name = ? where name = ?");
             /*System.out.println("Dime el nuevo valor del campo name:");
             auxValor = lector.nextLine();
@@ -409,12 +411,12 @@ public class Practica8 {
             System.out.println("Se ha aplicado el update en " + filas + " filas.");
             
             System.out.println("Actualización campo price tabla serves");
-            pst = crearPst("serves","price","beer");
+            pst = crearPst(con,pst, "serves","price","beer");
             filas = pst.executeUpdate();
             System.out.println("Se ha aplicado el update en " + filas + " filas.");
             
             System.out.println("Actualización tabla frequents");
-            pst = crearPst("frequents","times_a_week","drinker");
+            pst = crearPst(con, pst, "frequents","times_a_week","drinker");
             filas = pst.executeUpdate();
             System.out.println("Se ha aplicado el update en " + filas + " filas.");
             
@@ -435,12 +437,13 @@ public class Practica8 {
      * Creamos un objeto de tipo PreparedStatement listo para lanzar executeUpdate
      * @return devolvemos el PreparedStatement que hemos creado.
      */
-    public static PreparedStatement crearPst(String tabla, String columna, String campoCondicion) throws SQLException{
+    public static PreparedStatement crearPst(Connection con, PreparedStatement pst, String tabla, String columna, String campoCondicion) throws SQLException{
         Scanner lector = new Scanner(System.in);
         String auxValor = "";
         String query = "update " + tabla + " set " + columna + " = ? where " + campoCondicion + " =?";
-        Connection con = obtenerConexion();
-        PreparedStatement pst = con.prepareStatement(query);
+        con = obtenerConexion();
+        con.setAutoCommit (false);
+        pst = con.prepareStatement(query);
         
         System.out.println("Dime el nuevo valor del campo " + columna);
         auxValor = lector.nextLine();
@@ -449,8 +452,9 @@ public class Practica8 {
         auxValor = lector.nextLine();
         pst.setString(2, auxValor);
         
-        con.close();
-        pst.close();
+        //No cierro el recurso porqué lo cierro en la funcion transaccion1();
+        //con.close();
+        //pst.close();
         
         return pst;
     }
