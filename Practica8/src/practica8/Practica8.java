@@ -15,6 +15,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -320,6 +321,7 @@ public class Practica8 {
                     transaccion1();
                     break;
                 case 3:
+                    transaccion2();
                     break;
                 case 4:
                     salir = true;
@@ -396,10 +398,13 @@ public class Practica8 {
     parte de la transacción y falla la última qué ocurre?
     RESPUESTA: No se actualiza, la prueba que hecho es desconectar el programa antes de ejecutar la ultima query
     3. ¿Qué ocurre si dejas el autocommit a false y ejecutas el apartado b y luego el a?
+    En mi caso en particular, si dejo el autocommit a false, al ejecutar el apartado abro una nueva conexion a la BBDD,
+    por lo tanto, se reinicia la conexion y el autocommit está a true, de forma que no tiene impacto.
+    
+    Si se reutilizase la misma conexión a la base de datos, como en el apartado a, no hago un con.commit() no se grabarían los cambios.
+    
     */
     public static void transaccion1() throws SQLException{
-        //Scanner lector = new Scanner(System.in);
-        //String auxValor = "";
         int filas;
         PreparedStatement pst = null;
         Connection con = obtenerConexion();
@@ -428,6 +433,7 @@ public class Practica8 {
             System.out.println("Hago rollback");
 
         } finally{
+            con.setAutoCommit(true);
             pst.close();
             con.close();
         }
@@ -458,7 +464,7 @@ public class Practica8 {
                 System.out.println("Dime el valor actual del campo " + campoCondicion + " para que se ejecute el update");
                 rs = pst.executeQuery("select " + campoCondicion + " from " + tabla);
             }
-            //obtengo el tipo de dato de la columna del primer ? antes de setearla
+            //obtengo el tipo de dato de la columna antes de setearla
             rsmd = rs.getMetaData();
             tipoColumna = rsmd.getColumnTypeName(1);
             System.out.println(rsmd.getColumnTypeName(1));
@@ -476,5 +482,54 @@ public class Practica8 {
         }
         
         return pst;
+    }
+    
+    /*EJERCICIO 2.c: Transacción_2.
+    Replica el apartado anterior en un nuevo método, pero incluyendo un savepoint a
+    partir de la segunda sentencia.
+    ¿Qué ocurre si falla la segunda sentencia?
+    RESPUESTA: Se ha hecho el commit del primer update 
+    ¿Y si falla la tercera?
+    REPSUESTA: Idem que en el caso anterior, se hace el commit unicamente del primer update,
+    aunque la segunda sentencia haya ido bien, el rollback retrocede todo lo que se ha ejecutado
+    hasta el punto1.
+    */
+    public static void transaccion2() throws SQLException{
+        int filas;
+        PreparedStatement pst = null;
+        Connection con = obtenerConexion();
+        Savepoint punto1 = null;
+        try {
+            con.setAutoCommit(false);
+            //1 SENTENCIA SQL
+            System.out.println("Actualización campo name de la tabla beer");
+            pst = crearPst(con,pst,"beer","name","name");
+            filas = pst.executeUpdate();
+            System.out.println("Se ha aplicado el update en " + filas + " filas.");
+            punto1 = con.setSavepoint();
+            //2 SENTENCIA SQL
+            System.out.println("Actualización campo price tabla serves");
+            pst = crearPst(con,pst,"serves","price","beer");
+            filas = pst.executeUpdate();
+            System.out.println("Se ha aplicado el update en " + filas + " filas.");
+            //3 SENTENCIA SQL
+            System.out.println("Actualización tabla frequents");
+            pst = crearPst(con,pst,"frequents","times_a_week","drinker");
+            filas = pst.executeUpdate();
+            System.out.println("Se ha aplicado el update en " + filas + " filas.");
+            
+            con.commit();
+
+        } catch (SQLException ex) {
+            con.rollback(punto1);
+            con.commit();
+            System.out.println("SQLSTATE " + ex.getSQLState() + "SQLMESSAGE" + ex.getMessage());
+            System.out.println("Hago rollback");
+
+        } finally{
+            con.setAutoCommit(true);
+            pst.close();
+            con.close();
+        }
     }
 }

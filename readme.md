@@ -33,3 +33,16 @@ De esta forma he obtenido todos los resultados de la tabla serves.
     parte de la transacción y falla la última qué ocurre?**
     RESPUESTA: No se actualiza, la prueba que hecho es desconectar el programa antes de ejecutar la ultima query
     3. ¿Qué ocurre si dejas el autocommit a false y ejecutas el apartado b y luego el a?
+    En mi caso en particular, si dejo el autocommit a false, al ejecutar el apartado abro una nueva conexion a la BBDD,
+    por lo tanto, se reinicia la conexion y el autocommit está a true, de forma que no tiene impacto.
+    
+    Si se reutilizase la misma conexión a la base de datos, como en el apartado a, no hago un con.commit() no se grabarían los cambios.
+##PRUEBAS EJERCICIO 2.c: Transacción_2.
+    Replica el apartado anterior en un nuevo método, pero incluyendo un savepoint a
+    partir de la segunda sentencia.
+    **¿Qué ocurre si falla la segunda sentencia?**
+    RESPUESTA: Se ha hecho el commit del primer update 
+    **¿Y si falla la tercera?**
+    REPSUESTA: Idem que en el caso anterior, se hace el commit unicamente del primer update,
+    aunque la segunda sentencia haya ido bien, el rollback retrocede todo lo que se ha ejecutado
+    hasta el punto1.
